@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { width: 310px; margin: 0; padding: 14px; background: #fff; color: #1e293b; font-size: 13px; }
+    .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .head-left { display: flex; align-items: center; gap: 8px; }
+    .head-left img { width: 22px; height: 22px; border-radius: 5px; }
+    .head-left strong { font-size: 14px; color: #1e293b; }
+    .row-toggle {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 10px; background: #f8fafc; border: 1px solid #e2e8f0;
+      border-radius: 6px; margin-bottom: 10px; font-size: 12px; font-weight: 600;
+    }
+    label.lbl { display: block; font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 3px; }
+    select, input[type="text"], input[type="password"] {
+      width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 5px;
+      margin-bottom: 8px; font-size: 12px; background: #fff; color: #1e293b;
+    }
+    button {
+      width: 100%; border: none; border-radius: 6px; padding: 7px 8px; font-size: 12px;
+      font-weight: 600; cursor: pointer; background: #2b67ff; color: #fff;
+    }
+    button.sec { background: #f1f5f9; color: #334155; }
+    .btn-row { display: flex; gap: 6px; margin-top: 6px; }
+    .history-box {
+      margin-top: 10px; padding: 8px 10px; background: #f8fafc;
+      border: 1px solid #e2e8f0; border-radius: 6px;
+    }
+    .history-head {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; font-weight: 600; margin-bottom: 6px;
+    }
+    .msg { font-size: 11px; color: #0f766e; margin-top: 6px; min-height: 15px; }
+    .notice {
+      margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0;
+      font-size: 11px; color: #64748b; line-height: 1.5;
+    }
+    .links {
+      display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px;
+    }
+    .links a { color: #2b67ff; text-decoration: none; }
+    .links a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="head">
+    <div class="head-left">
+      <img src="icons/icon48.png" alt="icon" />
+      <strong>飞羽 · arXiv 论文助手</strong>
+    </div>
+  </div>
+
+  <div class="row-toggle">
+    <span>在网页显示悬浮面板</span>
+    <input id="p-show-panel" type="checkbox" style="cursor:pointer;" />
+  </div>
+
+  <label class="lbl">服务商</label>
+  <select id="p-provider">
+    <option value="deepseek">DeepSeek</option>
+    <option value="openai">OpenAI</option>
+    <option value="custom">自定义接口</option>
+  </select>
+
+  <label class="lbl">模型</label>
+  <select id="p-model"></select>
+
+  <div id="p-custom" style="display:none;">
+    <label class="lbl">接口地址</label>
+    <input id="p-url" type="text" placeholder="https://xxx/v1/chat/completions" />
+  </div>
+
+  <label class="lbl">API Key</label>
+  <input id="p-key" type="password" placeholder="sk-..." />
+
+  <button id="p-save">保存配置</button>
+  <div class="msg" id="p-msg"></div>
+
+  <div class="history-box">
+    <div class="history-head">
+      <span>已读论文记录：<span id="h-count">0</span> 篇</span>
+      <a href="javascript:void(0)" id="h-clear" style="font-size:11px;color:#94a3b8;text-decoration:none;">清空</a>
+    </div>
+    <div class="btn-row">
+      <button id="h-export-md" class="sec" style="flex:1;">导出 Markdown</button>
+      <button id="h-export-bib" class="sec" style="flex:1;">导出 BibTeX (Zotero)</button>
+    </div>
+  </div>
+
+  <div class="notice">
+    适用范围：仅用于 arXiv (arxiv.org) 论文页面。<br />
+    模型说明：需用户自行接入 API Key，密钥与阅读记录均仅保存在本地浏览器，不经过任何第三方服务器。
+  </div>
+
+  <div class="links">
+    <a href="https://arxiv.org/" target="_blank">打开 arXiv</a>
+    <a href="javascript:void(0)" id="p-feedback-toggle">问题反馈</a>
+  </div>
+
+  <div id="fb-box" style="display:none;margin-top:8px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;">
+    <label class="lbl">问题或建议</label>
+    <textarea id="fb-text" rows="3" placeholder="请描述遇到的问题或改进建议..." style="width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:5px;font-size:12px;resize:vertical;margin-bottom:6px;font-family:inherit;"></textarea>
+    <input id="fb-contact" type="text" placeholder="联系方式（选填，如邮箱/微信）" />
+    <button id="fb-send">发送反馈</button>
+    <div class="msg" id="fb-msg"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
