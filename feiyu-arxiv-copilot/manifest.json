@@ -10,7 +10,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "src/popup/popup.html",
     "default_title": "飞羽 · arXiv 论文助手",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -29,7 +29,7 @@
     "https://*/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background/service-worker.js"
   },
   "content_scripts": [
     {
@@ -40,9 +40,24 @@
         "https://ar5iv.labs.arxiv.org/*"
       ],
       "js": [
-        "content.js"
+        "src/config/constants.js",
+        "src/content/render.js",
+        "src/content/extractor.js",
+        "src/content/panel.js",
+        "src/content/index.js"
       ],
       "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/content/panel.css"
+      ],
+      "matches": [
+        "https://arxiv.org/*",
+        "https://ar5iv.labs.arxiv.org/*"
+      ]
     }
   ]
 }
