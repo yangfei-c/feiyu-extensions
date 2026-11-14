@@ -35,11 +35,11 @@
 
 ### Chrome 应用商店
 
-审核中，敬请期待。
+打开 [Chrome 应用商店的「飞羽 · arXiv 论文助手」详情页](https://chromewebstore.google.com/detail/gmpagaiebchoilchbhdbpgjjbbefipcl)，点击「添加至 Chrome」。
 
 ### 本地手动安装
 
-1. 如果已有 Release，从 [GitHub Releases](https://github.com/yangfei-c/feiyu-extensions/releases) 下载并解压压缩包。也可以克隆本仓库。
+1. 从 [GitHub Releases 下载 `feiyu-arxiv-copilot-v2.2.3.zip`](https://github.com/yangfei-c/feiyu-extensions/releases/download/v2.2.3/feiyu-arxiv-copilot-v2.2.3.zip)并解压。也可以克隆本仓库。
 
    ```bash
    git clone https://github.com/yangfei-c/feiyu-extensions.git
