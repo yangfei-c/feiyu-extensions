@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "飞羽 · arXiv 论文助手",
-  "version": "2.2.3",
-  "description": "专用于 arXiv 论文页面的双语对照翻译、结构化导读、划词问答与阅读记录导出工具（需用户自行接入 API Key）",
+  "name": "飞羽 · 学术论文助手（arXiv / ScienceDirect）",
+  "version": "2.3.0",
+  "description": "用于 arXiv 与 ScienceDirect 论文页面的双语对照翻译、结构化导读、划词问答与阅读记录导出工具（需用户自行接入 API Key）",
   "author": "YangFei",
   "icons": {
     "16": "icons/icon16.png",
@@ -11,7 +11,7 @@
   },
   "action": {
     "default_popup": "src/popup/popup.html",
-    "default_title": "飞羽 · arXiv 论文助手",
+    "default_title": "飞羽 · 学术论文助手（arXiv / ScienceDirect）",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -19,11 +19,16 @@
     }
   },
   "permissions": [
-    "storage"
+    "storage",
+    "contextMenus"
   ],
   "host_permissions": [
     "https://api.deepseek.com/*",
-    "https://api.openai.com/*"
+    "https://api.openai.com/*",
+    "https://arxiv.org/*",
+    "https://www.sciencedirect.com/*",
+    "https://*.sciencedirectassets.com/*",
+    "https://ars.els-cdn.com/*"
   ],
   "optional_host_permissions": [
     "https://*/*"
@@ -37,12 +42,15 @@
         "https://arxiv.org/abs/*",
         "https://arxiv.org/html/*",
         "https://arxiv.org/pdf/*",
-        "https://ar5iv.labs.arxiv.org/*"
+        "https://ar5iv.labs.arxiv.org/*",
+        "https://www.sciencedirect.com/science/article/*",
+        "https://*.sciencedirectassets.com/*"
       ],
       "js": [
         "src/config/constants.js",
         "src/content/render.js",
         "src/content/extractor.js",
+        "src/content/pdf.js",
         "src/content/panel.js",
         "src/content/index.js"
       ],
@@ -52,11 +60,15 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "src/content/panel.css"
+        "src/content/panel.css",
+        "src/lib/pdf.min.mjs",
+        "src/lib/pdf.worker.min.mjs"
       ],
       "matches": [
         "https://arxiv.org/*",
-        "https://ar5iv.labs.arxiv.org/*"
+        "https://ar5iv.labs.arxiv.org/*",
+        "https://www.sciencedirect.com/*",
+        "https://*.sciencedirectassets.com/*"
       ]
     }
   ]

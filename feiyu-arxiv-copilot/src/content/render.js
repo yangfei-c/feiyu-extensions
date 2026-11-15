@@ -43,7 +43,9 @@
       '\\\\exp': 'exp',
       '\\\\top': 'ᵀ'
     };
-    for (const [pat, rep] of Object.entries(symbols)) {
+    // 按匹配串长度降序替换，避免短命令抢先匹配长命令（\in 吞掉 \infty、\cdot 吞掉 \cdots）
+    const symbolEntries = Object.entries(symbols).sort((a, b) => b[0].length - a[0].length);
+    for (const [pat, rep] of symbolEntries) {
       s = s.replace(new RegExp(pat, 'g'), rep);
     }
 
@@ -60,7 +62,13 @@
       .replace(/\^\{([^}]*)\}/g, '<sup>$1</sup>')
       .replace(/_([A-Za-z0-9])/g, '<sub>$1</sub>')
       .replace(/\^([A-Za-z0-9])/g, '<sup>$1</sup>')
-      .replace(/\\[a-zA-Z]+/g, '')
+      // 纯排版命令直接删除（\left \right \displaystyle \limits \big \quad 等）
+      .replace(/\\(?:displaystyle|limits|bigg|Bigg|big|Big|left|right|quad|qquad)\b/g, '')
+      // 其余未知命令保留文字（仅去掉反斜杠），避免吞掉 \max \min \argmax \lim \sin 等算子
+      .replace(/\\([a-zA-Z]+)/g, '$1')
+      // 先把转义的集合大括号 \{ \} 转成 HTML 实体，避免随后被 [{}] 删除后留下孤立反斜杠
+      .replace(/\\\{/g, '&#123;')
+      .replace(/\\\}/g, '&#125;')
       .replace(/[{}]/g, '');
 
     return s.trim();
@@ -172,13 +180,13 @@
 
   function serializeWithPlaceholders(el) {
     const clone = el.cloneNode(true);
-    clone.querySelectorAll('.feiyu-inline-btn, .feiyu-fig-btn').forEach((b) => b.remove());
+    clone.querySelectorAll('.feiyu-inline-btn, .feiyu-fig-btn, .article-dochead').forEach((b) => b.remove());
 
     const tokenMap = new Map();
     let idx = 0;
 
     const protectedSelectors =
-      'math, mjx-container, .ltx_Math, .ltx_equation, .ltx_cite, .ltx_ref, code';
+      'math, mjx-container, span.math, .formula, .ltx_Math, .ltx_equation, .ltx_cite, .ltx_ref, code';
     clone.querySelectorAll(protectedSelectors).forEach((node) => {
       if (!node.parentNode) return;
       const token = `__FY_${idx++}__`;

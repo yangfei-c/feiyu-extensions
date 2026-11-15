@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="head">
+    <div class="head-left">
+      <img src="../../icons/icon48.png" alt="icon" />
+      <strong>飞羽 · B站学习助手</strong>
+    </div>
+  </div>
+
+  <div class="row-toggle">
+    <span>在网页显示悬浮面板</span>
+    <input id="p-show-panel" type="checkbox" style="cursor:pointer;" />
+  </div>
+
+  <label class="lbl">服务商</label>
+  <select id="p-provider">
+    <option value="deepseek">DeepSeek</option>
+    <option value="openai">OpenAI</option>
+    <option value="custom">自定义接口</option>
+  </select>
+
+  <label class="lbl">模型</label>
+  <select id="p-model"></select>
+
+  <div id="p-custom" style="display:none;">
+    <label class="lbl">接口地址</label>
+    <input id="p-url" type="text" placeholder="https://xxx/v1/chat/completions" />
+  </div>
+
+  <label class="lbl">API Key</label>
+  <input id="p-key" type="password" placeholder="sk-..." />
+
+  <button id="p-save">保存配置</button>
+  <div class="msg" id="p-msg"></div>
+
+  <div class="history-box">
+    <div class="history-head">
+      <span>视频笔记记录：<span id="h-count">0</span> 条</span>
+      <a href="#" id="h-clear" style="font-size:11px;color:#94a3b8;text-decoration:none;">清空</a>
+    </div>
+    <div class="btn-row">
+      <button id="h-export-md" class="sec" style="flex:1;">导出 Markdown</button>
+    </div>
+  </div>
+
+  <div class="notice">
+    适用范围：仅支持 bilibili.com 视频播放页。<br />
+    AI 字幕需在 B 站登录账号后读取；未登录时可用弹幕生成概览。<br />
+    密钥与笔记均仅保存在本地浏览器，不经过任何第三方服务器。
+  </div>
+
+  <div class="links">
+    <a href="https://www.bilibili.com/" target="_blank">打开 B 站</a>
+    <a href="#" id="p-feedback-toggle">问题反馈</a>
+  </div>
+
+  <div id="fb-box" style="display:none;margin-top:8px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;">
+    <label class="lbl">问题或建议</label>
+    <textarea id="fb-text" rows="3" placeholder="请描述遇到的问题或改进建议..." style="width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:5px;font-size:12px;resize:vertical;margin-bottom:6px;font-family:inherit;"></textarea>
+    <input id="fb-contact" type="text" placeholder="联系方式（选填，如邮箱/微信）" />
+    <button id="fb-send">发送反馈</button>
+    <div class="msg" id="fb-msg"></div>
+  </div>
+
+  <script src="../config/constants.js"></script>
+  <script src="export.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

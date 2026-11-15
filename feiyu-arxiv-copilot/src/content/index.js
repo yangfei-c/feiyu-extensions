@@ -4,35 +4,23 @@
 
   const F = (window.FeiyuArxiv = window.FeiyuArxiv || {});
 
-  // PDF 页面：仅展示切换到 HTML 全文版的提示条
-  if (location.pathname.startsWith('/pdf/')) {
-    if (document.getElementById('feiyu-pdf-bar')) return;
-    const arxivId = location.pathname.replace(/^\/pdf\//, '').replace(/\.pdf$/i, '');
-    const htmlUrl = `https://arxiv.org/html/${arxivId}`;
-    const bar = document.createElement('a');
-    bar.id = 'feiyu-pdf-bar';
-    bar.href = htmlUrl;
-    bar.innerText = '飞羽：切换到 HTML 全文版使用 AI 导读与翻译';
-    bar.style.cssText = `
-      position: fixed; top: 14px; right: 20px; z-index: 2147483647;
-      background: #2b67ff; color: #fff;
-      padding: 7px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
-      text-decoration: none; box-shadow: 0 4px 12px rgba(43,103,255,0.3);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    `;
-    document.body.appendChild(bar);
-    return;
-  }
-
   if (document.getElementById('feiyu-arxiv-host')) return;
 
   // 共享运行状态（extractor 与 panel 在调用期读取）
   const isHtmlPaper =
     location.pathname.startsWith('/html/') || location.hostname.includes('ar5iv');
+  const isScienceDirect = /(^|\.)sciencedirect\.com$/i.test(location.hostname);
+  const isPdfPage =
+    location.pathname.startsWith('/pdf/') || location.hostname.includes('sciencedirectassets.com');
   const state = {
     isHtmlPaper,
+    isScienceDirect,
+    isPdfPage,
     stopBatchFlag: false,
-    translationsHidden: false
+    translationsHidden: false,
+    transMode: 'visible',
+    guideMode: 'quick',
+    pdfPages: []
   };
   F.state = state;
 
@@ -148,7 +136,8 @@
       const sysPrompt = isHeading
         ? '你是学术论文翻译专家。请将英文论文标题或章节小标题翻译为简练准确的简体中文（保留专有名词缩写），仅输出译文。'
         : '你是计算机科学与人工智能顶会学术翻译专家。请将英文论文段落精准翻译为流畅严谨的简体中文。' +
-          '约束：1. 保留 Transformer、Attention 等通用英文术语；2. 形如 __FY_0__ 的占位符必须原样保留在对应位置；3. 仅输出译文。';
+          '约束：1. 保留 Transformer、Attention 等通用英文术语；2. 形如 __FY_0__ 的占位符必须原样保留在对应位置；3. 仅输出译文。' +
+          F.PROMPT_REFERENCES;
       const translated = await callAI(sysPrompt, text);
       box.innerHTML = F.render.restorePlaceholdersToHTML(translated, tokenMap);
       el.dataset.feiyuTranslated = '1';
@@ -160,11 +149,41 @@
     }
   }
 
+  async function translateBatch(list, onProgress) {
+    for (let i = 0; i < list.length; i++) {
+      if (F.state.stopBatchFlag) break;
+      onProgress?.(i, list.length);
+      await translateParagraph(list[i]);
+    }
+    return F.state.stopBatchFlag;
+  }
+
+  // 下载并缓存 PDF 按页文本（一次解析，导读与页码翻译共用）
+  async function getPdfPages(url, onProgress) {
+    if (F.state.pdfPages && F.state.pdfPages.length) return F.state.pdfPages;
+    const buf = await F.pdf.fetchPdfAsArrayBuffer(url, { preferDirect: F.state.isPdfPage });
+    const pages = await F.pdf.extractPages(buf, onProgress);
+    F.state.pdfPages = pages;
+    return pages;
+  }
+
+  function pagesToText(pages) {
+    return pages.map((t, i) => `[Page ${i + 1}]\n${t}`).join('\n\n');
+  }
+
+  // 全文文本（导读用）
+  async function getPdfText(url, onProgress) {
+    return pagesToText(await getPdfPages(url, onProgress));
+  }
+
   F.app = {
     callAI,
     imageToDataUrl,
     saveReadingHistory,
-    translateParagraph
+    translateParagraph,
+    translateBatch,
+    getPdfPages,
+    getPdfText
   };
 
   // 主入口：先挂载逐段翻译按钮，再挂载悬浮面板

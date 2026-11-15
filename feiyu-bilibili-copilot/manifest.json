@@ -1,0 +1,71 @@
+{
+  "manifest_version": 3,
+  "name": "飞羽 · B站学习助手",
+  "version": "1.0.0",
+  "description": "在 B 站视频页提取字幕生成带时间戳的 AI 总结、提炼高赞热评、并支持就视频内容随时提问（需用户自行接入 API Key）",
+  "author": "YangFei",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "飞羽 · B站学习助手",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://api.bilibili.com/*",
+    "https://aisubtitle.hdslb.com/*",
+    "https://api.deepseek.com/*",
+    "https://api.openai.com/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "src/background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.bilibili.com/video/*"
+      ],
+      "js": [
+        "src/content/page-bridge.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.bilibili.com/video/*"
+      ],
+      "js": [
+        "src/config/constants.js",
+        "src/content/api.js",
+        "src/content/render.js",
+        "src/content/panel.js",
+        "src/content/index.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/content/panel.css"
+      ],
+      "matches": [
+        "https://www.bilibili.com/*"
+      ]
+    }
+  ]
+}

@@ -22,7 +22,7 @@
     const md = hist
       .map((item) => {
         const timeStr = new Date(item.readAt).toLocaleString();
-        return `# ${item.title}\n\n- arXiv: ${item.url}\n- 阅读时间: ${timeStr}\n${item.codeRepo ? `- 开源代码: ${item.codeRepo}\n` : ''}\n${item.summary || ''}\n\n---\n`;
+        return `# ${item.title}\n\n- 原文: ${item.url}\n- 阅读时间: ${timeStr}\n${item.codeRepo ? `- 开源代码: ${item.codeRepo}\n` : ''}\n${item.summary || ''}\n\n---\n`;
       })
       .join('\n');
     return {
@@ -34,6 +34,11 @@
     };
   }
 
+  // 简单转义 BibTeX 特殊字符，避免破坏条目结构
+  function texEscape(s) {
+    return (s || '').replace(/[&%$#_{}]/g, (ch) => '\\' + ch);
+  }
+
   // 导出为 BibTeX 格式，可直接拖入 Zotero 导入文献库
   function exportBibTeX(hist) {
     if (hist.length === 0) {
@@ -41,9 +46,35 @@
     }
     const bib = hist
       .map((item, idx) => {
-        const id = (item.arxivId || `arxiv_${idx + 1}`).replace(/[^a-zA-Z0-9_]/g, '_');
-        const year = (item.arxivId || '').match(/^(\d{2})/) ? '20' + item.arxivId.slice(0, 2) : '2026';
-        return `@article{${id},\n  title={${item.title}},\n  author={${item.authors || 'arXiv Authors'}},\n  year={${year}},\n  eprint={${item.arxivId || ''}},\n  archivePrefix={arXiv},\n  url={${item.url}}\n}`;
+        const id = (item.arxivId || `ref_${idx + 1}`).replace(/[^a-zA-Z0-9_]/g, '_');
+        const title = texEscape(item.title);
+        const author = texEscape(item.authors || '');
+        const url = item.url || '';
+
+        // ScienceDirect（或带 DOI/期刊名）：生成标准 @article
+        if (item.source === 'sciencedirect' || item.doi || item.journal) {
+          const fields = [
+            `  title={${title}}`,
+            `  author={${author}}`,
+            item.journal ? `  journal={${texEscape(item.journal)}}` : '',
+            item.year ? `  year={${item.year}}` : '',
+            item.doi ? `  doi={${item.doi}}` : '',
+            url ? `  url={${url}}` : ''
+          ].filter(Boolean);
+          return `@article{${id},\n${fields.join(',\n')}\n}`;
+        }
+
+        // arXiv：保留 eprint / archivePrefix
+        const year = item.year || ((item.arxivId || '').match(/^(\d{2})/) ? '20' + item.arxivId.slice(0, 2) : '');
+        const fields = [
+          `  title={${title}}`,
+          `  author={${author}}`,
+          year ? `  year={${year}}` : '',
+          `  eprint={${item.arxivId || ''}}`,
+          `  archivePrefix={arXiv}`,
+          url ? `  url={${url}}` : ''
+        ].filter(Boolean);
+        return `@article{${id},\n${fields.join(',\n')}\n}`;
       })
       .join('\n\n');
     return {
