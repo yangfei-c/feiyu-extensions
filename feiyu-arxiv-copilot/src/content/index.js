@@ -20,7 +20,8 @@
     translationsHidden: false,
     transMode: 'visible',
     guideMode: 'quick',
-    pdfPages: []
+    pdfPages: [],
+    pdfPending: null
   };
   F.state = state;
 
@@ -159,12 +160,21 @@
   }
 
   // 下载并缓存 PDF 按页文本（一次解析，导读与页码翻译共用）
-  async function getPdfPages(url, onProgress) {
-    if (F.state.pdfPages && F.state.pdfPages.length) return F.state.pdfPages;
-    const buf = await F.pdf.fetchPdfAsArrayBuffer(url, { preferDirect: F.state.isPdfPage });
-    const pages = await F.pdf.extractPages(buf, onProgress);
-    F.state.pdfPages = pages;
-    return pages;
+  // 用 pdfPending 复用「进行中」的 Promise，防止快速连点「导读」「翻译页码」重复下载解析
+  function getPdfPages(url, onProgress) {
+    if (F.state.pdfPages && F.state.pdfPages.length) return Promise.resolve(F.state.pdfPages);
+    if (F.state.pdfPending) return F.state.pdfPending;
+    F.state.pdfPending = (async () => {
+      try {
+        const buf = await F.pdf.fetchPdfAsArrayBuffer(url, { preferDirect: F.state.isPdfPage });
+        const pages = await F.pdf.extractPages(buf, onProgress);
+        F.state.pdfPages = pages;
+        return pages;
+      } finally {
+        F.state.pdfPending = null;
+      }
+    })();
+    return F.state.pdfPending;
   }
 
   function pagesToText(pages) {

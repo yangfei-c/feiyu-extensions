@@ -15,14 +15,17 @@
     refreshTimer: null,
     subtitles: null,      // 当前视频字幕缓存
     subtitlesFor: '',     // 字幕缓存归属：`bvid|p|cid`，杜绝跨视频复用
+    subtitleMeta: null,   // 选中字幕的元信息 { lan, lanDoc, aiType, url }
+    viewPoints: [],       // 官方章节（wbi/v2 的 view_points）
     transcript: '',       // 带时间戳的字幕文本
     danmakuText: '',      // 弹幕概览文本
     comments: null,       // { total, list }
-    commentsFor: ''       // 评论缓存归属：`bvid|aid`
+    commentsFor: '',      // 评论缓存归属：`bvid|aid`
+    idRegistry: null      // 本会话见过的 aid/cid → bvid，用于识别串台
   };
   F.state = state;
 
-  function callAI(systemPrompt, userPrompt) {
+  function callAI(systemPrompt, userPrompt, imageDataUrl = null) {
     return new Promise((resolve, reject) => {
       chrome.storage.local.get(['provider', 'apiUrl', 'model', 'apiKey'], (cfg) => {
         const apiKey = (cfg.apiKey || '').trim();
@@ -40,7 +43,10 @@
         }
 
         chrome.runtime.sendMessage(
-          { type: 'FEIYU_AI_REQUEST', payload: { url, apiKey, model, systemPrompt, userPrompt } },
+          {
+            type: 'FEIYU_AI_REQUEST',
+            payload: { url, apiKey, model, systemPrompt, userPrompt, imageDataUrl }
+          },
           (res) => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message));
@@ -62,10 +68,13 @@
     state.video = null;
     state.subtitles = null;
     state.subtitlesFor = '';
+    state.subtitleMeta = null;
+    state.viewPoints = [];
     state.transcript = '';
     state.danmakuText = '';
     state.comments = null;
     state.commentsFor = '';
+    // 注意：idRegistry 是会话级记录，不随视频切换清空
   }
 
   // 当前地址是否仍指向同一条视频的同一集（防止 SPA 切换后仍用旧数据）
@@ -80,7 +89,7 @@
   async function resolveVideo({ force = false } = {}) {
     const route = F.api.parseRoute();
     if (!route) {
-      F.panel.setStatus('当前不是视频播放页（未识别到 BV 号）', true);
+      F.panel.setStatusFor('summary', '当前不是视频播放页（未识别到 BV 号）', true);
       return null;
     }
     const key = `${route.bvid}|${route.p}`;
@@ -97,13 +106,13 @@
         clearVideoState();
         F.panel.resetForNewVideo();
       }
-      F.panel.setStatus('正在读取视频信息...');
+      F.panel.setStatusFor('summary', '正在读取视频信息...');
 
       let info;
       try {
         info = await F.api.getVideoInfoFromView(route.bvid, route.p);
       } catch (err) {
-        if (state.routeKey === key) F.panel.setStatus(`获取视频信息失败：${err.message}`, true);
+        if (state.routeKey === key) F.panel.setStatusFor('summary', `获取视频信息失败：${err.message}`, true);
         return null;
       }
 
@@ -112,13 +121,14 @@
 
       // 数据完整性校验：aid / cid 缺失时绝不进入后续字幕 / 评论请求
       if (!info || !info.bvid || !info.aid || !info.cid) {
-        F.panel.setStatus('视频信息不完整（aid / cid 缺失），已中止', true);
+        F.panel.setStatusFor('summary', '视频信息不完整（aid / cid 缺失），已中止', true);
         return null;
       }
 
       state.video = info;
+      registerVideoIds(info);
       F.panel.renderVideoInfo(info);
-      F.panel.setStatus('已识别视频，可生成总结');
+      F.panel.setStatusFor('summary', '已识别视频，可生成总结');
       prefetchSubtitles(info);
       return info;
     })();
@@ -140,13 +150,23 @@
   }
 
   // —— 字幕：只使用明确传入（或当前已确认）的视频 cid ——
-  function pickSubtitle(subtitles) {
-    if (!subtitles.length) return null;
-    return (
-      subtitles.find((s) => /zh|cn|ai-zh/i.test(s.lan)) ||
-      subtitles.find((s) => /中文/.test(s.lanDoc)) ||
-      subtitles[0]
-    );
+  // 字幕筛选规则见 F.api.pickSubtitle（优先 UP 投稿中文字幕，其次 ai-zh）
+
+  // 维护"本会话见过的 aid/cid"，用于识别字幕 URL 里出现的其它视频标识
+  function registerVideoIds(v) {
+    if (!v) return;
+    if (!state.idRegistry) state.idRegistry = new Map();
+    if (v.aid) state.idRegistry.set(Number(v.aid), v.bvid);
+    if (v.cid) state.idRegistry.set(Number(v.cid), v.bvid);
+  }
+
+  function knownOtherIds(v) {
+    if (!state.idRegistry) return [];
+    const out = [];
+    for (const [id, bvid] of state.idRegistry) {
+      if (bvid !== v.bvid) out.push(id);
+    }
+    return out;
   }
 
   // 汇总“实际请求参数 + 字幕来源”的排查信息，直接显示在面板「总结」Tab
@@ -154,16 +174,28 @@
     const meta = (ret && ret.meta) || {};
     const info = meta.info || {};
     const picked = meta.picked || {};
+    const check = meta.check || {};
     const body = state.subtitles && state.subtitles.length ? state.subtitles : meta.body || [];
     const last = body.length ? body[body.length - 1] : null;
     const lines = [];
 
     lines.push(`构建=${F.BUILD_TAG || 'unknown'}`);
     lines.push(`bvid=${v.bvid}  p=${v.p}`);
-    lines.push(`aid=${v.aid}  cid=${v.cid}`);    if (v.duration) lines.push(`视频时长=${F.api.formatTime(v.duration)}`);
-    if (info.request) lines.push(`请求 player/v2: aid=${info.request.aid} cid=${info.request.cid}`);
+    lines.push(`aid=${v.aid}  cid=${v.cid}`);
+    if (v.duration) lines.push(`视频时长=${F.api.formatTime(v.duration)}`);
+    if (info.request) {
+      lines.push(`请求 player/wbi/v2: bvid=${info.request.bvid} cid=${info.request.cid}`);
+    }
     if (info.echoed) {
       lines.push(`接口回显: aid=${info.echoed.aid} cid=${info.echoed.cid} page=${info.echoed.pageNo}`);
+    }
+    if (info.viewPoints && info.viewPoints.length) {
+      lines.push(`官方章节=${info.viewPoints.length} 个`);
+    }
+    if (picked.url || picked.lan) {
+      lines.push(
+        `选中字幕: lan=${picked.lan || '-'} ai_type=${picked.aiType} 含aid=${check.hitsAid} 含cid=${check.hitsCid}`
+      );
     }
     if (picked.url) lines.push(`subtitle_url=${picked.url}`);
     if (body.length) {
@@ -174,7 +206,7 @@
         .join(' ｜ ');
       if (first) lines.push(`前两句: ${first}`);
     } else {
-      lines.push('字幕: 无（未登录或该视频没有 AI 字幕）');
+      lines.push('字幕: 无');
     }
     if (ret && ret.reason) lines.push(`状态: ${ret.reason}`);
     return lines.join('\n');
@@ -187,6 +219,7 @@
     // 字幕缓存必须与「视频身份」绑定（bvid|p|cid），绝不跨视频复用
     const cacheKey = `${v.bvid}|${v.p}|${v.cid}`;
     if (state.subtitles && state.subtitles.length && state.subtitlesFor === cacheKey) {
+      F.panel.setSubtitles(state.subtitles);
       return { ok: true, cached: true };
     }
     // 请求前再次确认地址仍指向这一集
@@ -194,47 +227,69 @@
 
     const isStale = () => state.routeKey !== `${v.bvid}|${v.p}` || !routeMatches(v);
 
-    F.panel.setStatus('正在获取字幕...');
-    let info = await F.api.getPlayerInfo({ aid: v.aid, cid: v.cid, bvid: v.bvid });
+    F.panel.setStatusFor('summary', '正在获取字幕...');
+    let info = await F.api.getPlayerInfo({ bvid: v.bvid, cid: v.cid, aid: v.aid });
     if (isStale()) return { ok: false, reason: 'stale' };
 
-    // B 站侧偶尔会瞬时返回空字幕列表（实测同一 cid 会波动），非登录墙时重试一次
+    // 播放器侧偶发空列表（非登录墙）时重试一次
     if (!info.subtitles.length && !info.needLoginSubtitle) {
       await new Promise((r) => setTimeout(r, 400));
       if (isStale()) return { ok: false, reason: 'stale' };
-      info = await F.api.getPlayerInfo({ aid: v.aid, cid: v.cid, bvid: v.bvid });
+      info = await F.api.getPlayerInfo({ bvid: v.bvid, cid: v.cid, aid: v.aid });
       if (isStale()) return { ok: false, reason: 'stale' };
     }
 
-    const picked = pickSubtitle(info.subtitles);
-    if (!picked) {
+    // 官方章节点（view_points）留存，供 AI 辅助分段
+    state.viewPoints = info.viewPoints || [];
+
+    if (!info.subtitles.length) {
       F.panel.showLoginHint();
-      return {
-        ok: false,
-        reason: info.needLoginSubtitle ? 'login' : 'none',
-        meta: { info, body: [] }
-      };
+      return { ok: false, reason: info.needLoginSubtitle ? 'login' : 'none', meta: { info } };
+    }
+
+    const picked = F.api.pickSubtitle(info.subtitles);
+    if (!picked) {
+      // 有字幕条目但 subtitle_url 均为空 → 字幕仍在生成
+      return { ok: false, reason: 'pending', meta: { info } };
+    }
+
+    // 防串台锚点校验：URL 中出现其它已知视频的 aid/cid 时直接拒绝
+    const check = F.api.verifySubtitleUrl(picked.url, {
+      aid: v.aid,
+      cid: v.cid,
+      knownIds: knownOtherIds(v)
+    });
+    if (!check.ok) {
+      return { ok: false, reason: 'conflict', meta: { info, picked, check } };
     }
 
     F.panel.hideLoginHint();
+    // 拿到链接后立刻下载：subtitle_url 带 auth_key，有时效，不能缓存延后
     const body = await F.api.fetchSubtitleBody(picked.url);
     if (isStale()) return { ok: false, reason: 'stale' };
-    if (!body.length) return { ok: false, reason: 'none', meta: { info, picked, body } };
+    if (!body.length) return { ok: false, reason: 'none', meta: { info, picked, body, check } };
 
     const last = body[body.length - 1];
     const lastTime = Number(last.to) || Number(last.from) || 0;
     // 时长合理性校验：字幕末条时间明显超出视频时长，极可能取到了别的视频
     if (v.duration && lastTime > v.duration + 60) {
-      return { ok: false, reason: 'mismatch', meta: { info, picked, body } };
+      return { ok: false, reason: 'mismatch', meta: { info, picked, body, check } };
     }
 
     state.subtitles = body;
     state.subtitlesFor = cacheKey;
-    state.transcript = F.api.transcriptToText(body, 14000);
+    state.subtitleMeta = {
+      lan: picked.lan,
+      lanDoc: picked.lanDoc,
+      aiType: picked.aiType,
+      url: picked.url
+    };
+    state.transcript = F.api.transcriptToText(body, 60000);
+    F.panel.setSubtitles(body);
     F.panel.setQaContext(
       `字幕已就绪（${body.length} 条，语言：${picked.lanDoc || picked.lan || '未标注'}）`
     );
-    return { ok: true, meta: { info, picked, body } };
+    return { ok: true, meta: { info, picked, body, check } };
   }
 
   async function prefetchSubtitles(video) {
@@ -244,16 +299,20 @@
       const ret = await ensureSubtitles(v);
       F.panel.renderDebug(buildDebugInfo(v, ret));
       if (ret.ok) {
-        F.panel.setStatus('字幕已就绪，可生成总结');
+        F.panel.setStatusFor('summary', '字幕已就绪，可生成总结');
       } else if (ret.reason === 'login') {
-        F.panel.setStatus('未登录 B 站，无法读取 AI 字幕；可先用弹幕生成概览', true);
+        F.panel.setStatusFor('summary', '未登录 B 站，无法读取 AI 字幕；可先用弹幕生成概览', true);
       } else if (ret.reason === 'none') {
-        F.panel.setStatus('该视频暂无字幕，可尝试用弹幕生成概览', true);
+        F.panel.setStatusFor('summary', '该视频暂无字幕，可尝试用弹幕生成概览', true);
       } else if (ret.reason === 'mismatch') {
-        F.panel.setStatus('字幕时长与视频不匹配，已拒绝使用（疑似串台），请重试', true);
+        F.panel.setStatusFor('summary', '字幕时长与视频不匹配，已拒绝使用（疑似串台），请重试', true);
+      } else if (ret.reason === 'pending') {
+        F.panel.setStatusFor('summary', '该视频字幕正在生成中或暂无可用字幕', true);
+      } else if (ret.reason === 'conflict') {
+        F.panel.setStatusFor('summary', '检测到字幕地址指向其它视频（疑似串台），已拒绝使用', true);
       }
     } catch (err) {
-      F.panel.setStatus(`字幕获取失败：${err.message}`, true);
+      F.panel.setStatusFor('summary', `字幕获取失败：${err.message}`, true);
     }
   }
 
@@ -318,25 +377,31 @@
         F.panel.renderDebug(buildDebugInfo(v, sub));
         if (!sub.ok) {
           if (sub.reason === 'stale') return; // 期间已切换视频，丢弃本次结果
-          if (sub.reason === 'mismatch') {
-            F.panel.renderSummary(
-              '<p>检测到字幕与当前视频时长不匹配（疑似取到了别的视频），已拒绝使用。请刷新页面后重试。</p>',
-              ''
-            );
-            F.panel.setStatus('字幕与视频不匹配，已中止生成', true);
-            return;
-          }
-          F.panel.renderSummary(
-            `<p>无法读取字幕${sub.reason === 'login' ? '（未登录 B 站）' : '（该视频无 AI 字幕）'}。</p>
-             <p>可在下方点击「用弹幕生成概览」作为替代方案。</p>`,
-            ''
-          );
-          F.panel.setStatus(
-            sub.reason === 'login'
-              ? '请先在 B 站右上角登录账号以读取 AI 字幕'
-              : '该视频暂无字幕，可尝试用弹幕生成概览',
-            true
-          );
+          const failMap = {
+            mismatch: [
+              '检测到字幕与当前视频时长不匹配（疑似取到了别的视频），已拒绝使用。请刷新页面后重试。',
+              '字幕与视频不匹配，已中止生成'
+            ],
+            conflict: [
+              '检测到字幕地址指向其它视频（疑似串台），已拒绝使用。请刷新页面后重试。',
+              '字幕地址串台，已中止生成'
+            ],
+            pending: [
+              '该视频字幕正在生成中或暂无可用字幕，请稍后再试。',
+              '该视频字幕正在生成中或暂无可用字幕'
+            ],
+            login: [
+              '无法读取字幕（未登录 B 站）。可在下方点击「用弹幕生成概览」作为替代方案。',
+              '请先在 B 站右上角登录账号以读取 AI 字幕'
+            ],
+            none: [
+              '无法读取字幕（该视频无 AI 字幕）。可在下方点击「用弹幕生成概览」作为替代方案。',
+              '该视频暂无字幕，可尝试用弹幕生成概览'
+            ]
+          };
+          const [failHtml, failStatus] = failMap[sub.reason] || failMap.none;
+          F.panel.renderSummary(`<p>${failHtml}</p>`, '');
+          F.panel.setStatus(failStatus, true);
           return;
         }
         // 字幕缓存必须与当前视频身份一致，否则拒绝使用（防串台最后一道闸）
@@ -353,9 +418,13 @@
         v.pages && v.pages.length > 1
           ? `P${v.p}（${(v.pages.find((x) => x.page === v.p) || {}).part || ''}）`
           : '单 P';
+      const chapters = F.api.viewPointsToText(state.viewPoints, 1600);
+      const descText = (v.desc || '').trim().slice(0, 2500);
       const userPrompt =
-        `视频标题：${v.title}\nUP主：${v.upName || '未知'}\n分P：${partLabel}\nBV号：${v.bvid}\n\n` +
-        `以下为${opts.useDanmaku ? '弹幕概览' : '带时间戳的字幕'}：\n${contextText}`;
+        `视频标题：${v.title}\nUP主：${v.upName || '未知'}\n分P：${partLabel}\nBV号：${v.bvid}\n` +
+        (descText ? `\n视频简介（可能含课程目录 / 仓库链接 / 勘误，请结合参考）：\n${descText}\n` : '') +
+        (chapters ? `\n官方章节（B 站 view_points，供分段参考）：\n${chapters}\n` : '') +
+        `\n以下为${opts.useDanmaku ? '弹幕概览' : '带时间戳的字幕'}：\n${contextText}`;
 
       const reply = await callAI(systemPrompt, userPrompt);
       if (startedKey !== state.routeKey) return; // 期间切换了视频，丢弃结果
@@ -444,11 +513,12 @@
     }
   }
 
-  // —— 功能：问答 ——
-  async function askQuestion(rawQuestion) {
+  // —— 功能：问答（支持 Ctrl+V 粘贴视频截图，走视觉模型） ——
+  async function askQuestion(rawQuestion, imageDataUrl = null) {
     const question = String(rawQuestion || '').trim();
-    if (!question) {
-      F.panel.setStatus('请输入问题', true);
+    const hasImage = Boolean(imageDataUrl);
+    if (!question && !hasImage) {
+      F.panel.setStatus('请输入问题，或先粘贴一张视频截图', true);
       return;
     }
     const v = await resolveVideo();
@@ -470,20 +540,28 @@
           if (sub.reason === 'stale') return; // 期间已切换视频
           const dm = await F.api.fetchDanmaku(v.cid);
           contextText = F.api.danmakuToText(dm, 8000);
-          if (!contextText) {
+          if (contextText) {
+            F.panel.setQaContext('字幕不可用，当前基于弹幕概览作答');
+          } else if (!hasImage) {
             F.panel.renderQaAnswer('<p>该视频暂无可用字幕或弹幕，无法基于视频内容作答。</p>');
             F.panel.setStatus('无可用上下文（未登录或无字幕/弹幕）', true);
             return;
+          } else {
+            F.panel.setQaContext('无字幕上下文，仅依据你粘贴的截图作答');
           }
-          F.panel.setQaContext('字幕不可用，当前基于弹幕概览作答');
         }
       }
 
+      const descText = (v.desc || '').trim().slice(0, 800);
       const userPrompt =
-        `视频标题：${v.title}\nBV号：${v.bvid}\n\n字幕上下文（带时间戳）：\n${contextText.slice(0, 9000)}\n\n` +
-        `用户问题：${question}`;
+        `视频标题：${v.title}\nBV号：${v.bvid}\n` +
+        (descText ? `视频简介：${descText}\n` : '') +
+        (contextText
+          ? `\n字幕上下文（带时间戳）：\n${contextText.slice(0, 9000)}\n`
+          : '\n（无可用字幕上下文，请结合截图作答）\n') +
+        `\n用户问题：${question || '请解读我粘贴的这张视频截图'}`;
       const startedKey = state.routeKey;
-      const reply = await callAI(F.PROMPTS.qa, userPrompt);
+      const reply = await callAI(F.PROMPTS.qa, userPrompt, imageDataUrl);
       if (startedKey !== state.routeKey) return; // 期间已切换视频
       F.panel.renderQaAnswer(F.render.renderMarkdownToHTML(reply));
       F.panel.clearQaInput();
@@ -533,7 +611,7 @@
       if (key !== state.routeKey) {
         clearVideoState();
         F.panel.resetForNewVideo();
-        F.panel.setStatus('检测到视频切换，正在读取信息...');
+        F.panel.setStatusFor('summary', '检测到视频切换，正在读取信息...');
       }
       scheduleRefresh(0);
     }, 600);

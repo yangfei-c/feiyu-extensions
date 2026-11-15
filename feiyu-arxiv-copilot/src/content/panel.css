@@ -149,6 +149,10 @@ button:hover { opacity: 0.92; }
 .btn-outline { width: 100%; background: #f1f5f9; color: #334155; margin-top: 8px; }
 .status { font-size: 11px; color: #0f766e; min-height: 16px; margin-bottom: 8px; }
 .status.err { color: #dc2626; }
+.status:empty { display: none; }
+/* 内容为空时收起空的输出容器，避免出现空白边框 */
+.summary-box:empty,
+.pdf-trans-out:empty { display: none; }
 .tabs {
   display: flex;
   gap: 0;
@@ -234,6 +238,7 @@ button:hover { opacity: 0.92; }
 .qa-hint { font-size: 10.5px; color: #94a3b8; margin: 4px 0 6px; }
 .btn-block { width: 100%; display: block; margin-bottom: 8px; flex: none; }
 .trans-hint { font-size: 11px; color: #94a3b8; padding: 8px 2px; }
+.guide-hint { font-size: 10.5px; color: #94a3b8; margin: -2px 0 8px; line-height: 1.5; }
 
 .summary-box {
   display: block;

@@ -66,24 +66,28 @@
             <div class="vi-meta" id="vi-meta"></div>
           </div>
 
-          <div class="status" id="status">就绪</div>
-
-          <div class="hint" id="sub-hint">
-            请先在 B 站右上角登录账号以读取 AI 字幕（或点击下方按钮尝试用弹幕生成概览）。
-            <div><button class="hint-btn" id="btn-danmaku">用弹幕生成概览</button></div>
-          </div>
-
           <div class="tab-panel active" id="tab-summary">
+            <div class="status" id="status-summary">就绪</div>
+            <div class="hint" id="sub-hint">
+              请先在 B 站右上角登录账号以读取 AI 字幕（或点击下方按钮尝试用弹幕生成概览）。
+              <div><button class="hint-btn" id="btn-danmaku">用弹幕生成概览</button></div>
+            </div>
             <button class="btn-primary btn-block" id="btn-summary">生成总结</button>
             <div class="summary-box" id="summary-box"></div>
             <button class="btn-outline" id="btn-copy-md" style="display:none;">复制 Markdown 笔记</button>
             <div class="debug-box" id="debug-box" style="display:none;">
-              <div class="debug-head">实际请求参数（排查用）</div>
-              <pre id="debug-content"></pre>
+              <div class="debug-head" id="debug-toggle">排查信息（点击展开）</div>
+              <pre id="debug-content" style="display:none;"></pre>
             </div>
+            <div class="subs-row" id="subs-row" style="display:none;">
+              <button class="btn-ghost" id="btn-toggle-subs" style="flex:1;">查看原文字幕</button>
+              <button class="btn-ghost" id="btn-copy-subs" style="flex:none;">复制全部</button>
+            </div>
+            <div class="subs-list" id="subs-list" style="display:none;"></div>
           </div>
 
           <div class="tab-panel" id="tab-reply">
+            <div class="status" id="status-reply"></div>
             <button class="btn-primary btn-block" id="btn-load-comments">拉取高赞评论</button>
             <div class="comment-list" id="comment-list"></div>
             <button class="btn-ghost btn-block" id="btn-summarize-comments">AI 提炼课代表笔记</button>
@@ -91,12 +95,18 @@
           </div>
 
           <div class="tab-panel" id="tab-qa">
+            <div class="status" id="status-qa"></div>
             <div class="qa-box">
               <div class="qa-head">
                 <strong>视频问答</strong>
                 <span id="qa-clear" style="cursor:pointer;color:#94a3b8;">✕</span>
               </div>
               <div class="qa-context" id="qa-context">已读取字幕后将作为问答上下文</div>
+              <div class="qa-paste-hint">在输入框内按 Ctrl + V 可粘贴视频截图，随问题一起发送</div>
+              <div class="qa-img-wrap" id="qa-img-wrap" style="display:none;">
+                <img id="qa-img" class="qa-img-preview" alt="截图预览" />
+                <span id="qa-img-clear" class="qa-img-clear">移除截图</span>
+              </div>
               <div class="qa-input-row">
                 <input id="qa-input" type="text" placeholder="就视频内容提问，如：第 3 分钟讲了什么" />
                 <button class="btn-primary" id="qa-send">提问</button>
@@ -113,7 +123,9 @@
     const $ = (sel) => shadow.querySelector(sel);
     const cardEl = $('#main-card');
     const panelBody = $('#panel-body');
-    const statusEl = $('#status');
+    const statusSummary = $('#status-summary');
+    const statusReply = $('#status-reply');
+    const statusQa = $('#status-qa');
     const cfgBox = $('#cfg-box');
     const subHint = $('#sub-hint');
     const hdrVideo = $('#hdr-video');
@@ -126,9 +138,17 @@
     const qaAnswer = $('#qa-answer');
     const qaInput = $('#qa-input');
     const qaContext = $('#qa-context');
+    const qaImgWrap = $('#qa-img-wrap');
+    const qaImg = $('#qa-img');
+    const qaImgClear = $('#qa-img-clear');
     const copyMdBtn = $('#btn-copy-md');
     const debugBox = $('#debug-box');
     const debugContent = $('#debug-content');
+    const debugToggle = $('#debug-toggle');
+    const subsRow = $('#subs-row');
+    const btnToggleSubs = $('#btn-toggle-subs');
+    const btnCopySubs = $('#btn-copy-subs');
+    const subsList = $('#subs-list');
 
     const providerSel = $('#sel-provider');
     const modelSel = $('#sel-model');
@@ -145,13 +165,25 @@
     };
 
     let latestMarkdown = '';
+    let currentTab = 'summary';
 
-    const setStatus = (msg, isErr = false) => {
-      statusEl.className = isErr ? 'status err' : 'status';
-      statusEl.innerText = msg;
+    // 三个 Tab 各自维护状态栏，避免切换 Tab 时状态文字串台
+    function statusElFor(tab) {
+      if (tab === 'reply') return statusReply;
+      if (tab === 'qa') return statusQa;
+      return statusSummary;
+    }
+
+    const setStatus = (msg, isErr = false, tab) => {
+      const el = statusElFor(tab || currentTab);
+      el.className = isErr ? 'status err' : 'status';
+      el.innerText = msg;
     };
 
+    const setStatusFor = (tab, msg, isErr = false) => setStatus(msg, isErr, tab);
+
     function switchTab(name) {
+      currentTab = name;
       tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
       Object.keys(panels).forEach((k) => panels[k].classList.toggle('active', k === name));
     }
@@ -172,6 +204,110 @@
         else setStatus(ret.error || '跳转失败', true);
       });
     });
+
+    // —— 原文字幕：懒渲染 + 时间戳跳转 + 一键复制 ——
+    let currentSubtitles = [];
+    let subsExpanded = false;
+
+    function renderSubtitleRows() {
+      if (!currentSubtitles.length) return;
+      const frag = document.createDocumentFragment();
+      for (const line of currentSubtitles) {
+        const row = document.createElement('div');
+        row.className = 'sub-item';
+        const btn = document.createElement('button');
+        btn.className = 'ts-btn';
+        btn.dataset.sec = String(Math.max(0, Math.round(line.from)));
+        btn.title = `跳到 ${F.api.formatTime(line.from)}`;
+        btn.innerText = F.api.formatTime(line.from);
+        const span = document.createElement('span');
+        span.className = 'sub-text';
+        span.innerText = line.content;
+        row.appendChild(btn);
+        row.appendChild(span);
+        frag.appendChild(row);
+      }
+      subsList.innerHTML = '';
+      subsList.appendChild(frag);
+    }
+
+    subsList.addEventListener('click', (e) => {
+      const btn = e.target.closest('.ts-btn');
+      if (!btn) return;
+      e.preventDefault();
+      const sec = Number(btn.dataset.sec) || 0;
+      const ret = F.api.jumpTo(sec);
+      setStatus(ret.ok ? `已跳转到 ${F.api.formatTime(sec)}` : ret.error || '跳转失败', !ret.ok);
+    });
+
+    btnToggleSubs.onclick = () => {
+      if (!currentSubtitles.length) {
+        setStatus('尚未加载字幕', true);
+        return;
+      }
+      subsExpanded = !subsExpanded;
+      if (subsExpanded && !subsList.childElementCount) renderSubtitleRows();
+      subsList.style.display = subsExpanded ? 'block' : 'none';
+      btnToggleSubs.innerText = subsExpanded
+        ? `收起原文字幕（${currentSubtitles.length} 条）`
+        : `查看原文字幕（${currentSubtitles.length} 条）`;
+    };
+
+    btnCopySubs.onclick = async () => {
+      if (!currentSubtitles.length) {
+        setStatus('尚未加载字幕', true);
+        return;
+      }
+      const text = currentSubtitles
+        .map((x) => `[${F.api.formatTime(x.from)}] ${x.content}`)
+        .join('\n');
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus(`已复制全部字幕（${currentSubtitles.length} 条）`);
+      } catch {
+        setStatus('复制失败，请检查剪贴板权限', true);
+      }
+    };
+
+    // —— 问答：Ctrl + V 粘贴视频截图 ——
+    let qaImageDataUrl = '';
+
+    function setQaImage(dataUrl) {
+      qaImageDataUrl = dataUrl || '';
+      if (qaImageDataUrl) {
+        qaImg.src = qaImageDataUrl;
+        qaImgWrap.style.display = 'flex';
+        setStatus('已粘贴截图，将随问题一起发送', false, 'qa');
+      } else {
+        qaImg.removeAttribute('src');
+        qaImgWrap.style.display = 'none';
+      }
+    }
+
+    qaImgClear.onclick = () => setQaImage('');
+
+    cardEl.addEventListener('paste', (e) => {
+      const items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      for (const item of items) {
+        if (!item.type || !item.type.startsWith('image/')) continue;
+        const file = item.getAsFile();
+        if (!file) continue;
+        e.preventDefault();
+        const reader = new FileReader();
+        reader.onload = () => setQaImage(String(reader.result || ''));
+        reader.readAsDataURL(file);
+        return;
+      }
+    });
+
+    // —— 排查信息：默认折叠为一行小字，点击展开 ——
+    let debugExpanded = false;
+    debugToggle.onclick = () => {
+      debugExpanded = !debugExpanded;
+      debugContent.style.display = debugExpanded ? 'block' : 'none';
+      debugToggle.innerText = debugExpanded ? '排查信息（点击收起）' : '排查信息（点击展开）';
+    };
 
     // —— 配置区 ——
     function populateModels(providerKey, selectedModelId) {
@@ -304,13 +440,14 @@
     $('#btn-danmaku').onclick = () => F.app.generateSummary({ useDanmaku: true });
     $('#btn-load-comments').onclick = () => F.app.loadComments();
     $('#btn-summarize-comments').onclick = () => F.app.summarizeComments();
-    $('#qa-send').onclick = () => F.app.askQuestion(qaInput.value);
+    $('#qa-send').onclick = () => F.app.askQuestion(qaInput.value, qaImageDataUrl);
     qaInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') F.app.askQuestion(qaInput.value);
+      if (e.key === 'Enter') F.app.askQuestion(qaInput.value, qaImageDataUrl);
     });
     $('#qa-clear').onclick = () => {
       qaAnswer.innerHTML = '';
       qaInput.value = '';
+      setQaImage('');
     };
     copyMdBtn.onclick = async () => {
       if (!latestMarkdown) return;
@@ -321,6 +458,7 @@
     // —— 供 index.js 调用的渲染方法 ——
     const panel = {
       setStatus,
+      setStatusFor,
       switchTab,
       showLoginHint() { subHint.classList.add('show'); },
       hideLoginHint() { subHint.classList.remove('show'); },
@@ -355,7 +493,7 @@
         copyMdBtn.style.display = markdown ? 'block' : 'none';
       },
 
-      // 打印实际请求用到的 bvid / aid / cid / subtitle_url 与前两句字幕（排查串台用）
+      // 打印实际请求用到的 bvid / aid / cid / subtitle_url 与前两句字幕（默认折叠，不占版面）
       renderDebug(text) {
         if (!text) {
           debugContent.textContent = '';
@@ -364,6 +502,22 @@
         }
         debugContent.textContent = text;
         debugBox.style.display = 'block';
+        debugContent.style.display = debugExpanded ? 'block' : 'none';
+        debugToggle.innerText = debugExpanded ? '排查信息（点击收起）' : '排查信息（点击展开）';
+      },
+
+      // 原始字幕（懒渲染，避免长视频一次性插入几千行 DOM）
+      setSubtitles(list) {
+        currentSubtitles = Array.isArray(list) ? list : [];
+        subsExpanded = false;
+        subsList.innerHTML = '';
+        subsList.style.display = 'none';
+        if (currentSubtitles.length) {
+          subsRow.style.display = 'flex';
+          btnToggleSubs.innerText = `查看原文字幕（${currentSubtitles.length} 条）`;
+        } else {
+          subsRow.style.display = 'none';
+        }
       },
 
       renderComments(comments) {
@@ -411,12 +565,25 @@
         copyMdBtn.style.display = 'none';
         debugContent.textContent = '';
         debugBox.style.display = 'none';
+        currentSubtitles = [];
+        subsExpanded = false;
+        subsList.innerHTML = '';
+        subsList.style.display = 'none';
+        subsRow.style.display = 'none';
+        setQaImage('');
+        qaInput.value = '';
+        debugExpanded = false;
         subHint.classList.remove('show');
+        statusSummary.className = 'status';
+        statusReply.className = 'status';
+        statusQa.className = 'status';
+        statusSummary.innerText = '正在读取视频信息...';
+        statusReply.innerText = '';
+        statusQa.innerText = '';
         viTitle.innerText = '正在读取视频信息...';
         viMeta.innerText = '';
         hdrVideo.innerText = '正在读取视频信息...';
         hdrVideo.title = '';
-        setStatus('已切换视频，正在读取信息...');
       }
     };
 

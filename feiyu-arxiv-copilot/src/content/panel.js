@@ -64,15 +64,15 @@
             <button class="btn-primary btn-block" id="btn-save-cfg">保存配置</button>
           </div>
 
-          <div class="status" id="status">就绪 · 可划选段落、公式或点击图片提问</div>
-
           <div class="tab-panel active" id="tab-summary">
             <div class="mode-row">
               <span class="mode-label">导读</span>
-              <button class="mode-btn active" id="guide-quick">快速</button>
-              <button class="mode-btn" id="guide-full">全文</button>
+              <button class="mode-btn active" id="guide-quick">摘要快读</button>
+              <button class="mode-btn" id="guide-full">全文精读</button>
             </div>
+            <div class="guide-hint" id="guide-hint">仅分析摘要，适合快速筛论文</div>
             <button class="btn-primary btn-block" id="btn-summary">生成导读</button>
+            <div class="status" id="status-summary"></div>
             <div class="summary-box" id="summary-box"></div>
             <button class="btn-outline" id="btn-copy-md" style="display:none;">复制 Markdown 笔记</button>
           </div>
@@ -94,6 +94,7 @@
             <button class="btn-ghost btn-block" id="btn-toggle-trans" title="隐藏/显示译文">显隐</button>
             `}
             <button class="btn-green btn-block" id="btn-translate">开始翻译</button>
+            <div class="status" id="status-trans"></div>
             ${isPdfPage ? `<div class="pdf-trans-out" id="pdf-trans-out"></div>` : `<div class="trans-hint">译文将逐段显示在页面原文下方，可点「显隐」切换。</div>`}
           </div>
 
@@ -112,6 +113,7 @@
                 <input id="qa-input" type="text" placeholder="输入问题（如：举例解释、推导公式；也可 Ctrl+V 粘贴截图）" />
                 <button class="btn-primary" id="qa-send">提问</button>
               </div>
+              <div class="status" id="status-qa"></div>
               <div class="qa-hint">支持在 PDF 中按 Win+Shift+S 截图后在此 Ctrl+V 粘贴识图</div>
               <div class="qa-answer" id="qa-answer"></div>
             </div>
@@ -130,7 +132,11 @@
     const urlInp = $('#inp-url');
     const customModelInp = $('#inp-custom-model');
     const keyInp = $('#inp-key');
-    const statusEl = $('#status');
+    const statusEls = {
+      summary: $('#status-summary'),
+      trans: $('#status-trans'),
+      qa: $('#status-qa')
+    };
     const summaryBox = $('#summary-box');
     const copyMdBtn = $('#btn-copy-md');
     const cfgBox = $('#cfg-box');
@@ -145,6 +151,7 @@
 
     const guideQuickBtn = $('#guide-quick');
     const guideFullBtn = $('#guide-full');
+    const guideHintEl = $('#guide-hint');
     const transVisibleBtn = $('#trans-visible');
     const transSectionsBtn = $('#trans-sections');
     const transAllBtn = $('#trans-all');
@@ -160,17 +167,26 @@
     let currentQaImageEl = null;
     let currentQaImageDataUrl = null;
 
-    const setStatus = (msg, isErr = false) => {
-      statusEl.className = isErr ? 'status err' : 'status';
-      statusEl.innerText = msg;
-    };
+    // 每个 Tab 独立的「状态行」，仅在各自 Tab 内更新，互不串台
+    function setTabStatus(tab, msg, isErr = false) {
+      const el = statusEls[tab];
+      if (!el) return;
+      el.className = isErr ? 'status err' : 'status';
+      el.innerText = msg;
+    }
+
+    let activeTab = 'summary';
 
     function switchTab(name) {
+      activeTab = name;
       tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
       tabSummary.classList.toggle('active', name === 'summary');
       if (tabTrans) tabTrans.classList.toggle('active', name === 'trans');
       tabQa.classList.toggle('active', name === 'qa');
     }
+
+    // 默认写给「导读」Tab；译文/问答在各自函数内用局部别名覆盖
+    const setStatus = (msg, isErr = false) => setTabStatus('summary', msg, isErr);
 
     tabButtons.forEach((b) => {
       b.onclick = () => switchTab(b.dataset.tab);
@@ -240,13 +256,24 @@
       });
     }
 
+    const GUIDE_HINTS = {
+      quick: '仅分析摘要，适合快速筛论文',
+      full: '读取整篇正文与公式，适合深入拆解方法与实验'
+    };
+    function updateGuideHint() {
+      if (guideHintEl) guideHintEl.innerText = GUIDE_HINTS[F.state.guideMode] || GUIDE_HINTS.quick;
+    }
+    updateGuideHint();
+
     guideQuickBtn.onclick = () => {
       F.state.guideMode = 'quick';
       setActiveMode([guideQuickBtn, guideFullBtn], guideQuickBtn);
+      updateGuideHint();
     };
     guideFullBtn.onclick = () => {
       F.state.guideMode = 'full';
       setActiveMode([guideQuickBtn, guideFullBtn], guideFullBtn);
+      updateGuideHint();
     };
 
     if (transVisibleBtn) {
@@ -414,7 +441,7 @@
         },
         () => {
           cfgBox.style.display = 'none';
-          setStatus(`已保存 (${F.PROVIDERS[prov].label} · ${finalModel})`);
+          setTabStatus(activeTab, `已保存 (${F.PROVIDERS[prov].label} · ${finalModel})`);
         }
       );
     };
@@ -443,7 +470,7 @@
         document.querySelectorAll('.feiyu-bilingual-box').forEach((box) => {
           box.style.display = F.state.translationsHidden ? 'none' : 'block';
         });
-        setStatus(F.state.translationsHidden ? '已隐藏译文' : '已显示译文');
+        setTabStatus('trans', F.state.translationsHidden ? '已隐藏译文' : '已显示译文');
       };
     }
 
@@ -562,7 +589,7 @@
           qaContext.innerText = '';
           qaContext.style.display = 'none';
         }
-        setStatus('已粘贴截图，可直接提问（如：解释图中公式）');
+        setTabStatus('qa', '已粘贴截图，可直接提问（如：解释图中公式）');
         qaInput.focus();
       };
       reader.readAsDataURL(file);
@@ -793,6 +820,7 @@
 
     // PDF 页：按页码在面板内分段翻译
     async function runPdfPageRangeTranslate() {
+      const setStatus = (m, e) => setTabStatus('trans', m, e);
       const rangeStr = pdfRangeInput ? pdfRangeInput.value.trim() : '';
       const pages = parsePageRange(rangeStr);
       if (pages.length === 0) {
@@ -819,7 +847,7 @@
           setStatus(`正在翻译第 ${page} 页（${i + 1}/${pages.length}）...`);
           // 第 page 页只取 allPages[page - 1]，逐页独立，绝不跨页合并
           const pageText = allPages[page - 1] || '';
-          const chunks = splitTextChunks(pageText, 2400);
+          const chunks = splitTextChunks(pageText, 8000);
 
           // 每页渲染一个独立块，页码标签严格置于该页内容最顶部
           outHtml += `<div class="pdf-chunk"><div class="pdf-page-tag">第 ${page} 页</div>`;
@@ -847,6 +875,7 @@
     let translating = false;
 
     transBtn.onclick = async () => {
+      const setStatus = (m, e) => setTabStatus('trans', m, e);
       if (translating) {
         F.state.stopBatchFlag = true;
         setStatus('正在停止...');

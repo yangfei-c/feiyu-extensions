@@ -14,7 +14,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 async function handleAiRequest(payload, sendResponse) {
   try {
-    const { url, apiKey, model, systemPrompt, userPrompt } = payload || {};
+    const { url, apiKey, model, systemPrompt, userPrompt, imageDataUrl } = payload || {};
 
     if (!url) {
       sendResponse({ ok: false, error: '请先填写有效的接口地址' });
@@ -25,6 +25,19 @@ async function handleAiRequest(payload, sendResponse) {
       return;
     }
 
+    let targetModel = model || 'deepseek-flash';
+    // 图像输入需要支持视觉的模型；deepseek-v4-pro 不支持图片时回退到 deepseek-flash
+    if (imageDataUrl && targetModel === 'deepseek-v4-pro') {
+      targetModel = 'deepseek-flash';
+    }
+
+    const userContent = imageDataUrl
+      ? [
+          { type: 'text', text: userPrompt },
+          { type: 'image_url', image_url: { url: imageDataUrl } }
+        ]
+      : userPrompt;
+
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -32,11 +45,11 @@ async function handleAiRequest(payload, sendResponse) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: model || 'deepseek-flash',
+        model: targetModel,
         temperature: 0.2,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: userContent }
         ]
       })
     });
