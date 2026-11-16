@@ -1,10 +1,12 @@
 ![飞羽 · 学术论文助手封面](./store-assets/宣传图/宣传图.jpg)
 
-# <img src="./store-assets/图标/icon128.png" width="40" height="40" alt="飞羽图标"> 飞羽 · 学术论文助手（arXiv / ScienceDirect）
+# <img src="./store-assets/图标/icon128.png" width="40" height="40" alt="飞羽图标"> 飞羽 · 学术论文助手
 
 **版本 v2.3.0** · 作者 YangFei
 
-为科研阅读设计的论文辅助扩展：在 arXiv、ar5iv、ScienceDirect 与 PDF 原文页面上生成结构化导读、双语对照译文，并支持划词提问与阅读记录导出。
+为科研阅读提供结构化导读、双语对照译文、划词提问与阅读记录导出。
+
+目前已支持 arXiv、ar5iv、ScienceDirect 及 PDF 论文页面，后续将逐步延伸适配更多常见学术论文网站。
 
 ## 核心功能
 
@@ -44,7 +46,7 @@
 
 ### Chrome 应用商店
 
-打开 [Chrome 应用商店的「飞羽 · arXiv 论文助手」详情页](https://chromewebstore.google.com/detail/gmpagaiebchoilchbhdbpgjjbbefipcl)，点击「添加至 Chrome」。
+打开 [Chrome 应用商店的「飞羽 · 学术论文助手」详情页](https://chromewebstore.google.com/detail/gmpagaiebchoilchbhdbpgjjbbefipcl)，点击「添加至 Chrome」。
 
 ### 本地手动安装
 
@@ -56,7 +58,7 @@
 
 2. 在 Chrome 地址栏打开 `chrome://extensions/`。
 3. 开启右上角的「开发者模式」。
-4. 点击「加载已解压的扩展程序」，选择包含 `manifest.json` 的 `feiyu-arxiv-copilot` 文件夹。
+4. 点击「加载已解压的扩展程序」，选择解压后包含 `manifest.json` 的文件夹。通过仓库克隆安装时，选择 `feiyu-arxiv-copilot` 子目录。
 
 安装后，点击浏览器工具栏中的扩展图标，保存 API 配置，再打开或刷新一篇论文（arXiv / ar5iv / ScienceDirect / PDF）。
 

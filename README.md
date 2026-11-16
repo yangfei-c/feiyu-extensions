@@ -1,4 +1,4 @@
-# Feiyu Extensions（飞羽浏览器扩展合集）
+# 飞羽 · 学术论文助手
 
 作者：YangFei
 
@@ -11,11 +11,11 @@
 | [飞羽 · 学术论文助手](./feiyu-arxiv-copilot/README.md) | v2.3.0 | 支持 arXiv / ar5iv / ScienceDirect / PDF 的论文阅读助手：结构化导读、双语对照翻译、划词与图表问答、阅读记录导出。 |
 | [飞羽 · B站学习助手](./feiyu-bilibili-copilot/README.md) | v1.0.0 | 把 B 站视频整理成学习笔记：带时间戳的 AI 总结、高赞热评与 AI 课代表提炼、视频问答。 |
 
-## 飞羽 · 学术论文助手（v2.3.0）
+## 飞羽 · 学术论文助手
 
 [![飞羽 · 学术论文助手封面](./feiyu-arxiv-copilot/store-assets/宣传图/宣传图.jpg)](./feiyu-arxiv-copilot/README.md)
 
-面向科研文献阅读，覆盖 arXiv、ar5iv、ScienceDirect 与 PDF 原文页：
+目前已支持 arXiv、ar5iv、ScienceDirect 及 PDF 论文页面，后续将逐步延伸适配更多常见学术论文网站。
 
 - **三 Tab 分页**：导读 / 译文 / 问答三个页签各自独立，切换时状态互不串台。
 - **结构化导读（摘要快读 / 全文精读）**：摘要快读仅分析摘要、适合快速筛论文；全文精读读取整篇正文与公式、适合深入拆解方法与实验。
@@ -40,7 +40,7 @@
 
 ## 安装方式
 
-- **Chrome 应用商店**：[打开「飞羽 · 学术论文助手（arXiv / ScienceDirect）」详情页](https://chromewebstore.google.com/detail/gmpagaiebchoilchbhdbpgjjbbefipcl)，点击「添加至 Chrome」。
+- **Chrome 应用商店**：[打开「飞羽 · 学术论文助手」详情页](https://chromewebstore.google.com/detail/gmpagaiebchoilchbhdbpgjjbbefipcl)，点击「添加至 Chrome」。
 - **GitHub 手动安装**：[下载 v2.3.0 安装包](https://github.com/yangfei-c/feiyu-extensions/releases/download/v2.3.0/feiyu-arxiv-copilot-v2.3.0.zip)并解压，然后按[手动安装步骤](./feiyu-arxiv-copilot/README.md#本地手动安装)加载扩展。
 - **飞羽 · B站学习助手（手动安装）**：克隆本仓库后，按[手动安装步骤](./feiyu-bilibili-copilot/README.md#本地手动安装)加载 `feiyu-bilibili-copilot` 文件夹。
 

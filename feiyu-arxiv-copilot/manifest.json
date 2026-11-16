@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "飞羽 · 学术论文助手（arXiv / ScienceDirect）",
+  "name": "飞羽 · 学术论文助手",
   "version": "2.3.0",
-  "description": "用于 arXiv 与 ScienceDirect 论文页面的双语对照翻译、结构化导读、划词问答与阅读记录导出工具（需用户自行接入 API Key）",
+  "description": "支持 arXiv、ScienceDirect 及 PDF 论文页面，提供双语对照翻译、结构化导读、划词问答与阅读记录导出（需用户自行接入 API Key）",
   "author": "YangFei",
   "icons": {
     "16": "icons/icon16.png",
@@ -11,7 +11,7 @@
   },
   "action": {
     "default_popup": "src/popup/popup.html",
-    "default_title": "飞羽 · 学术论文助手（arXiv / ScienceDirect）",
+    "default_title": "飞羽 · 学术论文助手",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
