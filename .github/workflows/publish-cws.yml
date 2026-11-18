@@ -49,6 +49,7 @@ jobs:
 
       - name: 语法检查与干净打包
         run: |
+          node -e "const m=require('./feiyu-arxiv-copilot/manifest.json'); if(m.manifest_version!==3){console.error('manifest_version must be 3, got '+m.manifest_version); process.exit(1)}"
           find feiyu-arxiv-copilot/src -name "*.js" -print0 | xargs -0 -n1 node --check
           mkdir -p dist
           (cd feiyu-arxiv-copilot && zip -r ../dist/arxiv.zip manifest.json icons src)
@@ -78,6 +79,7 @@ jobs:
 
       - name: 语法检查与干净打包
         run: |
+          node -e "const m=require('./feiyu-bilibili-copilot/manifest.json'); if(m.manifest_version!==3){console.error('manifest_version must be 3, got '+m.manifest_version); process.exit(1)}"
           find feiyu-bilibili-copilot/src -name "*.js" -print0 | xargs -0 -n1 node --check
           mkdir -p dist
           (cd feiyu-bilibili-copilot && zip -r ../dist/bilibili.zip manifest.json icons src)
