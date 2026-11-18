@@ -1,5 +1,10 @@
 name: Sync Extensions to Chrome Web Store
 
+# 目标：任何一次提交（只要改到了扩展目录）都能自动打包并发布到 Chrome 商店。
+# 版本策略：打包前把 manifest.json 的 version 的 patch 位改成 GITHUB_RUN_NUMBER（只增不减），
+# 保证每次上传的版本都严格大于商店当前已发布版本，避免「Version is not increased」。
+# 说明：major.minor 仍由开发者手动控制；若商店版本被人为改高，请把 manifest 的 minor 调高一次。
+
 on:
   workflow_dispatch:
     inputs:
@@ -15,8 +20,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'feiyu-arxiv-copilot/manifest.json'
-      - 'feiyu-bilibili-copilot/manifest.json'
+      - 'feiyu-arxiv-copilot/**'
+      - 'feiyu-bilibili-copilot/**'
 
 jobs:
   detect:
@@ -31,9 +36,9 @@ jobs:
         with:
           filters: |
             arxiv:
-              - 'feiyu-arxiv-copilot/manifest.json'
+              - 'feiyu-arxiv-copilot/**'
             bilibili:
-              - 'feiyu-bilibili-copilot/manifest.json'
+              - 'feiyu-bilibili-copilot/**'
 
   publish-arxiv:
     needs: detect
@@ -47,9 +52,16 @@ jobs:
         with:
           node-version: 20
 
+      - name: 校验 manifest_version（必须为 3）
+        run: |
+          node -e "const m=require('./feiyu-arxiv-copilot/manifest.json'); if(m.manifest_version!==3){console.error('manifest_version must be 3, got '+m.manifest_version); process.exit(1)}; console.log('manifest_version=3 OK')"
+
+      - name: 自动升版本（保证大于商店已发布版本）
+        run: |
+          node -e "const fs=require('fs');const p='feiyu-arxiv-copilot/manifest.json';const m=JSON.parse(fs.readFileSync(p,'utf8'));const v=m.version.split('.');v[2]=String(process.env.GITHUB_RUN_NUMBER);m.version=v.join('.');fs.writeFileSync(p,JSON.stringify(m,null,2)+'\n');console.log('arXiv 本次发布版本 ->',m.version)"
+
       - name: 语法检查与干净打包
         run: |
-          node -e "const m=require('./feiyu-arxiv-copilot/manifest.json'); if(m.manifest_version!==3){console.error('manifest_version must be 3, got '+m.manifest_version); process.exit(1)}"
           find feiyu-arxiv-copilot/src -name "*.js" -print0 | xargs -0 -n1 node --check
           mkdir -p dist
           (cd feiyu-arxiv-copilot && zip -r ../dist/arxiv.zip manifest.json icons src)
@@ -77,9 +89,16 @@ jobs:
         with:
           node-version: 20
 
+      - name: 校验 manifest_version（必须为 3）
+        run: |
+          node -e "const m=require('./feiyu-bilibili-copilot/manifest.json'); if(m.manifest_version!==3){console.error('manifest_version must be 3, got '+m.manifest_version); process.exit(1)}; console.log('manifest_version=3 OK')"
+
+      - name: 自动升版本（保证大于商店已发布版本）
+        run: |
+          node -e "const fs=require('fs');const p='feiyu-bilibili-copilot/manifest.json';const m=JSON.parse(fs.readFileSync(p,'utf8'));const v=m.version.split('.');v[2]=String(process.env.GITHUB_RUN_NUMBER);m.version=v.join('.');fs.writeFileSync(p,JSON.stringify(m,null,2)+'\n');console.log('B站 本次发布版本 ->',m.version)"
+
       - name: 语法检查与干净打包
         run: |
-          node -e "const m=require('./feiyu-bilibili-copilot/manifest.json'); if(m.manifest_version!==3){console.error('manifest_version must be 3, got '+m.manifest_version); process.exit(1)}"
           find feiyu-bilibili-copilot/src -name "*.js" -print0 | xargs -0 -n1 node --check
           mkdir -p dist
           (cd feiyu-bilibili-copilot && zip -r ../dist/bilibili.zip manifest.json icons src)
