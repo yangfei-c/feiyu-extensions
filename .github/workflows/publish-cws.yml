@@ -19,10 +19,27 @@ on:
       - 'feiyu-bilibili-copilot/manifest.json'
 
 jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      arxiv: ${{ steps.filter.outputs.arxiv }}
+      bilibili: ${{ steps.filter.outputs.bilibili }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            arxiv:
+              - 'feiyu-arxiv-copilot/manifest.json'
+            bilibili:
+              - 'feiyu-bilibili-copilot/manifest.json'
+
   publish-arxiv:
+    needs: detect
     if: |
       (github.event_name == 'workflow_dispatch' && (inputs.target == 'all' || inputs.target == 'feiyu-arxiv-copilot')) ||
-      (github.event_name == 'push' && contains(github.event.head_commit.modified, 'feiyu-arxiv-copilot/manifest.json'))
+      (github.event_name == 'push' && needs.detect.outputs.arxiv == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,9 +65,10 @@ jobs:
           npx -y chrome-webstore-upload-cli@latest publish
 
   publish-bilibili:
+    needs: detect
     if: |
       (github.event_name == 'workflow_dispatch' && (inputs.target == 'all' || inputs.target == 'feiyu-bilibili-copilot')) ||
-      (github.event_name == 'push' && contains(github.event.head_commit.modified, 'feiyu-bilibili-copilot/manifest.json'))
+      (github.event_name == 'push' && needs.detect.outputs.bilibili == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
