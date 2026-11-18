@@ -1,0 +1,72 @@
+- generic [ref=f1e4]:
+  - generic [ref=f1e7]:
+    - generic [ref=f1e8]:
+      - button "新建会话" [ref=f1e9] [cursor=pointer]
+      - button "收起侧边栏" [ref=f1e38] [cursor=pointer]
+    - button "新建会话" [ref=f1e41] [cursor=pointer]:
+      - generic [ref=f1e42]: 新会话
+      - generic [aria-hidden]:
+        - generic:
+          - generic: Ctrl
+          - generic: +
+          - generic: Alt
+          - generic: +
+          - generic: "N"
+    - navigation "全局面板" [ref=f1e47]:
+      - button "插件" [ref=f1e48] [cursor=pointer]
+      - button "自动化任务" [ref=f1e54] [cursor=pointer]
+      - button "更多" [ref=f1e61] [cursor=pointer]
+    - generic [ref=f1e68]:
+      - generic [ref=f1e69]:
+        - generic [ref=f1e70]: 工作区
+        - generic [ref=f1e72]:
+          - button "搜索会话" [ref=f1e73] [cursor=pointer]
+          - textbox "搜索会话名称"
+        - generic [ref=f1e76]:
+          - button "视图选项" [ref=f1e78] [cursor=pointer]
+          - button "添加工作区" [ref=f1e81] [cursor=pointer]
+      - tree "会话" [ref=f1e86]:
+        - treeitem "网页脚本" [expanded] [ref=f1e89] [cursor=pointer]
+        - treeitem "扩展脚本" [ref=f1e97] [cursor=pointer]
+    - generic [ref=f1e103]:
+      - region "简化侧栏显示" [ref=f1e106]:
+        - generic [ref=f1e107]:
+          - generic [ref=f1e108]: 今日
+          - generic [ref=f1e110]:
+            - generic [ref=f1e111]: ¥0.4025
+            - generic [ref=f1e112]: 1.9M tokens
+        - button "余额 打开 DeepSeek 充值页(platform.deepseek.com/usage) ¥7.46" [ref=f1e113] [cursor=pointer]:
+          - generic [ref=f1e114]:
+            - text: 余额
+            - link "打开 DeepSeek 充值页(platform.deepseek.com/usage)" [ref=f1e115]:
+              - /url: https://platform.deepseek.com/usage
+          - generic [ref=f1e118]: ¥7.46
+        - generic "当前为 DeepSeek 峰时高价时段,按峰时价计费 Asia/Shanghai · 09:00 — 12:00 剩余 1小时30分 · 12:00 转平价 本时段已过 50.4%" [ref=f1e119]:
+          - generic [ref=f1e120]:
+            - generic [ref=f1e121]: 峰时
+            - generic [ref=f1e123]: 剩余 1小时30分
+          - progressbar "当前计价时段已过进度" [ref=f1e124]
+          - generic [ref=f1e126]: 12:00 转平价
+        - generic [ref=f1e128]:
+          - generic [ref=f1e129]: 预算(本月)
+          - generic [ref=f1e130]: ¥21.9667 / ¥100
+        - generic "今日 ¥0.4025 · 1 模型 · 今日 ¥0.4025 · 1 模型" [ref=f1e131]:
+          - generic [ref=f1e132]: 今日
+          - generic [ref=f1e133]: ¥0.4025 · 1 模型
+      - button "账号菜单" [ref=f1e140] [cursor=pointer]
+  - generic [ref=f1e148]:
+    - banner [ref=f1e150]
+    - generic [ref=f1e157]:
+      - generic [ref=f1e165]:
+        - generic [ref=f1e166]: 探索未至之境
+        - generic [ref=f1e167]: 预览版
+      - button "选择工作区" [ref=f1e169] [cursor=pointer]
+      - generic [ref=f1e177] [cursor=pointer]:
+        - generic [ref=f1e179]:
+          - textbox "选择工作区" [ref=f1e180]
+          - generic [aria-hidden]: 选择一个工作区开始
+        - generic [ref=f1e181]:
+          - generic [ref=f1e182]:
+            - button "添加文件或调用指令" [disabled]
+          - generic [ref=f1e183]:
+            - button "发送消息" [disabled]
