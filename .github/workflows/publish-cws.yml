@@ -1,0 +1,76 @@
+name: Sync Extensions to Chrome Web Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: '选择要同步发布的扩展'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - feiyu-arxiv-copilot
+          - feiyu-bilibili-copilot
+  push:
+    branches: [main]
+    paths:
+      - 'feiyu-arxiv-copilot/manifest.json'
+      - 'feiyu-bilibili-copilot/manifest.json'
+
+jobs:
+  publish-arxiv:
+    if: |
+      (github.event_name == 'workflow_dispatch' && (inputs.target == 'all' || inputs.target == 'feiyu-arxiv-copilot')) ||
+      (github.event_name == 'push' && contains(github.event.head_commit.modified, 'feiyu-arxiv-copilot/manifest.json'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 语法检查与干净打包
+        run: |
+          find feiyu-arxiv-copilot/src -name "*.js" -print0 | xargs -0 -n1 node --check
+          mkdir -p dist
+          (cd feiyu-arxiv-copilot && zip -r ../dist/arxiv.zip manifest.json icons src)
+
+      - name: 上传并提交 Chrome 商店审核
+        env:
+          EXTENSION_ID: ${{ secrets.CWS_ARXIV_ID }}
+          PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+        run: |
+          npx -y chrome-webstore-upload-cli@latest upload --source dist/arxiv.zip
+          npx -y chrome-webstore-upload-cli@latest publish
+
+  publish-bilibili:
+    if: |
+      (github.event_name == 'workflow_dispatch' && (inputs.target == 'all' || inputs.target == 'feiyu-bilibili-copilot')) ||
+      (github.event_name == 'push' && contains(github.event.head_commit.modified, 'feiyu-bilibili-copilot/manifest.json'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 语法检查与干净打包
+        run: |
+          find feiyu-bilibili-copilot/src -name "*.js" -print0 | xargs -0 -n1 node --check
+          mkdir -p dist
+          (cd feiyu-bilibili-copilot && zip -r ../dist/bilibili.zip manifest.json icons src)
+
+      - name: 上传并提交 Chrome 商店审核
+        env:
+          EXTENSION_ID: ${{ secrets.CWS_BILIBILI_ID }}
+          PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+        run: |
+          npx -y chrome-webstore-upload-cli@latest upload --source dist/bilibili.zip
+          npx -y chrome-webstore-upload-cli@latest publish
