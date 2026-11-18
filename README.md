@@ -11,6 +11,16 @@
 | [飞羽 · 学术论文助手](./feiyu-arxiv-copilot/README.md) | v2.3.0 | 支持 arXiv / ar5iv / ScienceDirect / PDF 的论文阅读助手：结构化导读、双语对照翻译、划词与图表问答、阅读记录导出。 |
 | [飞羽 · B站学习助手](./feiyu-bilibili-copilot/README.md) | v1.0.0 | 把 B 站视频整理成学习笔记：带时间戳的 AI 总结、高赞热评与 AI 课代表提炼、视频问答。 |
 
+## 开发工作流
+
+按时段选择模型，用 DeepSeek Harness 和 Playwright MCP 开发、验证扩展，再通过 GitHub Actions 打包并同步到 Chrome 商店提审。
+
+上线后，用户可在扩展里提交反馈，由 Cloudflare Workers 接收并转发，再通过 Server酱推送到微信。
+
+![飞羽 Chrome 扩展开发流程](./开发工作流/飞羽开发工作流.png)
+
+[查看 SVG 矢量图](./开发工作流/飞羽开发工作流.svg)
+
 ## 飞羽 · 学术论文助手
 
 [![飞羽 · 学术论文助手封面](./feiyu-arxiv-copilot/store-assets/宣传图/宣传图.jpg)](./feiyu-arxiv-copilot/README.md)
