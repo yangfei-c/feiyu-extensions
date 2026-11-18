@@ -50,8 +50,9 @@
 
 ## 安装方式
 
-- **Chrome 应用商店**：[打开「飞羽 · 学术论文助手」详情页](https://chromewebstore.google.com/detail/gmpagaiebchoilchbhdbpgjjbbefipcl)，点击「添加至 Chrome」。
-- **GitHub 手动安装**：[下载 v2.3.0 安装包](https://github.com/yangfei-c/feiyu-extensions/releases/download/v2.3.0/feiyu-arxiv-copilot-v2.3.0.zip)并解压，然后按[手动安装步骤](./feiyu-arxiv-copilot/README.md#本地手动安装)加载扩展。
-- **飞羽 · B站学习助手（手动安装）**：克隆本仓库后，按[手动安装步骤](./feiyu-bilibili-copilot/README.md#本地手动安装)加载 `feiyu-bilibili-copilot` 文件夹。
+| 扩展 | Chrome 应用商店 | 手动安装 |
+| --- | --- | --- |
+| 飞羽 · 学术论文助手 | [在商店安装](https://chromewebstore.google.com/detail/gmpagaiebchoilchbhdbpgjjbbefipcl) | [查看安装步骤](./feiyu-arxiv-copilot/README.md#本地手动安装) |
+| 飞羽 · B站学习助手 | [在商店安装](https://chromewebstore.google.com/detail/jechfdjofhjjkofiekmdhnkjjkcnjgge) | [查看安装步骤](./feiyu-bilibili-copilot/README.md#本地手动安装) |
 
 仓库将持续更新已有扩展，并陆续加入其他浏览器扩展。
