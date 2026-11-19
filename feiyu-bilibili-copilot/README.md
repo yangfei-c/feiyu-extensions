@@ -2,7 +2,7 @@
 
 # <img src="./store-assets/图标/icon128.png" width="40" height="40" alt="飞羽图标"> 飞羽 · B站学习助手
 
-**版本 v1.0.0** · 作者 YangFei
+**源码版本 v4.1.1** · 作者 YangFei
 
 在 B 站视频播放页读取字幕，生成带时间戳的 AI 学习笔记，提炼高赞热评，并支持就视频内容随时提问。
 

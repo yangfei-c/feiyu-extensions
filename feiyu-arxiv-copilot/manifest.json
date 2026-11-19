@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "飞羽 · 学术论文助手",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "支持 arXiv、ScienceDirect 及 PDF 论文页面，提供双语对照翻译、结构化导读、划词问答与阅读记录导出（需用户自行接入 API Key）",
   "author": "YangFei",
   "icons": {

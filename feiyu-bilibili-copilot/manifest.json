@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "飞羽 · B站学习助手",
-  "version": "3.0.0",
+  "version": "4.1.1",
   "description": "在 B 站视频页提取字幕生成带时间戳的 AI 总结、提炼高赞热评、并支持就视频内容随时提问（需用户自行接入 API Key）",
   "author": "YangFei",
   "icons": {

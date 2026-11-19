@@ -2,7 +2,7 @@
 
 # <img src="./store-assets/图标/icon128.png" width="40" height="40" alt="飞羽图标"> 飞羽 · 学术论文助手
 
-**版本 v2.3.0** · 作者 YangFei
+**源码版本 v4.1.1** · 作者 YangFei
 
 为科研阅读提供结构化导读、双语对照译文、划词提问与阅读记录导出。
 

@@ -6,10 +6,12 @@
 
 ## 扩展列表
 
-| 扩展 | 当前版本 | 简介 |
+| 扩展 | 源码版本 | 简介 |
 | --- | --- | --- |
-| [飞羽 · 学术论文助手](./feiyu-arxiv-copilot/README.md) | v2.3.0 | 支持 arXiv / ar5iv / ScienceDirect / PDF 的论文阅读助手：结构化导读、双语对照翻译、划词与图表问答、阅读记录导出。 |
-| [飞羽 · B站学习助手](./feiyu-bilibili-copilot/README.md) | v1.0.0 | 把 B 站视频整理成学习笔记：带时间戳的 AI 总结、高赞热评与 AI 课代表提炼、视频问答。 |
+| [飞羽 · 学术论文助手](./feiyu-arxiv-copilot/README.md) | v4.1.1 | 支持 arXiv / ar5iv / ScienceDirect / PDF 的论文阅读助手：结构化导读、双语对照翻译、划词与图表问答、阅读记录导出。 |
+| [飞羽 · B站学习助手](./feiyu-bilibili-copilot/README.md) | v4.1.1 | 把 B 站视频整理成学习笔记：带时间戳的 AI 总结、高赞热评与 AI 课代表提炼、视频问答。 |
+
+Chrome 商店版本号的末位由 GitHub Actions 的运行编号生成。
 
 ## 开发工作流
 
@@ -35,7 +37,7 @@
 
 [查看完整说明 →](./feiyu-arxiv-copilot/README.md)
 
-## 飞羽 · B站学习助手（v1.0.0）
+## 飞羽 · B站学习助手
 
 [![飞羽 · B站学习助手封面](./feiyu-bilibili-copilot/store-assets/宣传图/宣传图.jpg)](./feiyu-bilibili-copilot/README.md)
 
